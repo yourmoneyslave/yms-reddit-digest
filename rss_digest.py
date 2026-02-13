@@ -366,7 +366,7 @@ body_html = f"""
 </html>
 """
 
-send_email(subject, body_text, body_html)
+    send_email(subject, body_text, body_html)
 
     # update state
     state["seen_ids"] = list(seen)[-10000:]
