@@ -7,14 +7,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import feedparser
-from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
 STATE_PATH = BASE_DIR / "state.json"
 OUTPUT_DIR = BASE_DIR / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
-
-load_dotenv()
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
