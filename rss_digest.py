@@ -3,6 +3,7 @@ import json
 import time
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -73,7 +74,7 @@ def score_item(title: str) -> int:
         score += 2
     return score
 
-def send_email(subject: str, body: str) -> None:
+def send_email(subject: str, body_text: str, body_html: str) -> None:
     host = os.getenv("SMTP_HOST")
     port = int(os.getenv("SMTP_PORT", "587"))
     user = os.getenv("SMTP_USER")
@@ -82,17 +83,23 @@ def send_email(subject: str, body: str) -> None:
     mail_from = os.getenv("MAIL_FROM", user)
 
     if not all([host, user, pwd, mail_to, mail_from]):
-        raise RuntimeError("Missing SMTP env vars in .env")
+        raise RuntimeError("Missing SMTP env vars")
 
-    msg = MIMEText(body, "plain", "utf-8")
+    msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = mail_from
     msg["To"] = mail_to
+
+    part1 = MIMEText(body_text, "plain", "utf-8")
+    part2 = MIMEText(body_html, "html", "utf-8")
+    msg.attach(part1)
+    msg.attach(part2)
 
     with smtplib.SMTP(host, port) as s:
         s.starttls()
         s.login(user, pwd)
         s.sendmail(mail_from, [mail_to], msg.as_string())
+
 
 def run():
     state = load_state()
@@ -165,8 +172,201 @@ def run():
     if len(collected) == 0:
         lines.append("No new items in the selected backfill window.")
 
-    subject = f"YMS Reddit queue: {len(collected)} new items"
-    send_email(subject, "\n".join(lines))
+subject = f"YMS Reddit queue: {len(collected)} new items"
+
+# plain text
+body_text = "\n".join(lines)
+
+# html
+def esc(s: str) -> str:
+    return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+def badge(feed_name: str) -> str:
+    t = (feed_name or "").lower()
+    if "findomme" in t or "platform" in t:
+        return '<span class="b b-findomme">FINDOMME</span>'
+    if "paypig" in t:
+        return '<span class="b b-paypig">PAYPIG</span>'
+    if "manga" in t or "media" in t:
+        return '<span class="b b-media">MEDIA</span>'
+    return '<span class="b b-general">GENERAL</span>'
+
+rows = []
+top = collected[:20]
+for i, it in enumerate(top, start=1):
+    title = esc(it.get("title", ""))
+    url = it.get("url", "")
+    feed = esc(it.get("feed", ""))
+    prio = it.get("priority", 0)
+
+    rows.append(f"""
+      <tr>
+        <td class="num">{i}</td>
+        <td class="meta">
+          {badge(it.get("feed",""))}
+          <div class="feed">{feed}</div>
+          <div class="prio">prio {prio}</div>
+        </td>
+        <td class="title">{title}</td>
+        <td class="cta">
+          <a class="btn" href="{url}">Open</a>
+        </td>
+      </tr>
+    """)
+
+body_html = f"""
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {{
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f6f7f9;
+      margin: 0;
+      padding: 24px;
+      color: #111;
+    }}
+    .card {{
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #e6e8ee;
+    }}
+    h1 {{
+      font-size: 18px;
+      margin: 0 0 8px 0;
+    }}
+    .sub {{
+      font-size: 13px;
+      color: #444;
+      margin-bottom: 14px;
+      line-height: 1.4;
+    }}
+    .kpis {{
+      font-size: 13px;
+      margin: 10px 0 16px 0;
+      color: #222;
+    }}
+    table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }}
+    th, td {{
+      border-top: 1px solid #eef0f4;
+      padding: 10px 8px;
+      vertical-align: top;
+    }}
+    th {{
+      text-align: left;
+      color: #333;
+      font-weight: 700;
+      background: #fafbfc;
+      border-top: 1px solid #e6e8ee;
+    }}
+    .num {{
+      width: 36px;
+      color: #666;
+    }}
+    .meta {{
+      width: 170px;
+    }}
+    .feed {{
+      font-weight: 700;
+      margin-top: 6px;
+    }}
+    .prio {{
+      color: #666;
+      margin-top: 2px;
+    }}
+    .title {{
+      line-height: 1.35;
+    }}
+    .cta {{
+      width: 90px;
+      text-align: right;
+    }}
+    .btn {{
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 10px;
+      text-decoration: none;
+      border: 1px solid #d6dbe6;
+      font-weight: 700;
+      color: #111;
+      background: #fff;
+    }}
+    .b {{
+      display: inline-block;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid #d6dbe6;
+      font-weight: 700;
+    }}
+    .b-paypig {{ background: #fff7ed; border-color: #fed7aa; }}
+    .b-findomme {{ background: #eef2ff; border-color: #c7d2fe; }}
+    .b-media {{ background: #f0fdf4; border-color: #bbf7d0; }}
+    .b-general {{ background: #f8fafc; border-color: #e2e8f0; }}
+    .footer {{
+      margin-top: 14px;
+      font-size: 12px;
+      color: #555;
+      line-height: 1.4;
+    }}
+    .rule {{
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: #fafbfc;
+      border: 1px solid #eef0f4;
+      border-radius: 10px;
+      font-size: 12px;
+      color: #333;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>YMS Reddit queue</h1>
+    <div class="sub">Pick 3 threads, reply with value, no selling. Usually no links in the comment.</div>
+
+    <div class="kpis">
+      <b>Items collected:</b> {len(collected)}<br>
+      <b>Top shown:</b> {min(20, len(collected))}<br>
+      <b>Saved file:</b> queue JSON committed in the repo output folder
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Type</th>
+          <th>Title</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(rows) if rows else '<tr><td colspan="4">No new items in the selected window.</td></tr>'}
+      </tbody>
+    </table>
+
+    <div class="rule">
+      Reply formula: 1 line context, 2 to 4 practical points, 1 question at the end.
+    </div>
+
+    <div class="footer">
+      Tip: focus on threads with low comment count and clear questions. Your profile and pinned posts do the linking.
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+send_email(subject, body_text, body_html)
 
     # update state
     state["seen_ids"] = list(seen)[-10000:]
