@@ -5,6 +5,7 @@ import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import feedparser
 
@@ -36,7 +37,6 @@ def parse_entry_time(entry) -> float:
     return time.time()
 
 def build_feeds() -> list[tuple[str, str]]:
-    # name, url
     queries = [
         ("Findom general", "findom OR \"financial domination\""),
         ("Paypig", "paypig OR \"pay pig\""),
@@ -52,7 +52,8 @@ def build_feeds() -> list[tuple[str, str]]:
 
     feeds = []
     for name, q in queries:
-        url = f"https://www.reddit.com/search.rss?q={q}&sort=new&t=week"
+        encoded_q = quote_plus(q)
+        url = f"https://www.reddit.com/search.rss?q={encoded_q}&sort=new&t=week"
         feeds.append((name, url))
     return feeds
 
