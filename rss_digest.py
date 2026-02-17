@@ -42,6 +42,10 @@ def parse_entry_time(entry) -> float:
     return time.time()
 
 
+def hours_ago(ts: float) -> int:
+    return max(0, int((utc_now().timestamp() - ts) // 3600))
+
+
 def build_feeds() -> list[tuple[str, str]]:
     queries = [
         ("Findom general", 'findom OR "financial domination"'),
@@ -64,29 +68,104 @@ def build_feeds() -> list[tuple[str, str]]:
     return feeds
 
 
-def score_item(title: str) -> int:
-    t = title.lower()
+def classify(feed_name: str, title: str) -> str:
+    f = (feed_name or "").lower()
+    t = (title or "").lower()
+
+    # strong findomme signals
+    if any(k in f for k in ["findomme", "platform"]) or any(k in t for k in ["findomme", "domme", "loyalfans", "fansly", "onlyfans"]):
+        return "FINDOMME"
+
+    # strong paypig signals
+    if "paypig" in f or any(k in t for k in ["paypig", "pay pig", "submissive", "slave"]):
+        return "PAYPIG"
+
+    # media cluster
+    if any(k in f for k in ["media", "manga"]) or any(k in t for k in ["movie", "movies", "tv", "television", "manga", "comic", "comics", "doujin"]):
+        return "MEDIA"
+
+    return "GENERAL"
+
+
+def compute_score(feed_name: str, title: str, age_h: int) -> tuple[int, list[str]]:
+    t = (title or "").lower()
+    f = (feed_name or "").lower()
     score = 0
-    hot_terms = [
-        "how to",
-        "beginner",
-        "start",
-        "advice",
-        "help",
-        "platform",
-        "loyalfans",
-        "paypig",
-        "findom",
-        "financial domination",
-        "teamviewer",
-        "telegram",
+    reasons: list[str] = []
+
+    # question bonus
+    if "?" in (title or ""):
+        score += 4
+        reasons.append("question")
+
+    # high intent keywords
+    keywords = [
+        ("beginner", 3, "beginner"),
+        ("starting", 2, "start"),
+        ("start", 2, "start"),
+        ("how do i", 3, "how-do-i"),
+        ("how to", 3, "how-to"),
+        ("advice", 2, "advice"),
+        ("help", 2, "help"),
+        ("platform", 3, "platform"),
+        ("loyalfans", 3, "loyalfans"),
+        ("teamviewer", 3, "teamviewer"),
+        ("boundar", 3, "boundaries"),
+        ("addict", 3, "addiction"),
+        ("safe", 2, "safe"),
     ]
-    for term in hot_terms:
+    for term, pts, label in keywords:
         if term in t:
-            score += 1
-    if "?" in title:
+            score += pts
+            reasons.append(label)
+
+    # feed relevance
+    if any(k in f for k in ["paypig", "findomme", "platform", "teamviewer"]):
         score += 2
-    return score
+        reasons.append("target-feed")
+
+    # penalties
+    if any(k in t for k in ["megathread", "weekly thread", "daily thread", "monthly thread"]):
+        score -= 4
+        reasons.append("megathread")
+
+    # age penalty
+    if age_h <= 2:
+        score += 3
+        reasons.append("fresh")
+    elif age_h <= 6:
+        score += 2
+        reasons.append("recent")
+    elif age_h <= 12:
+        score += 1
+    elif age_h >= 48:
+        score -= 3
+        reasons.append("old")
+
+    return score, reasons[:6]
+
+
+def suggested_opening(kind: str, title: str) -> str:
+    t = (title or "").lower()
+
+    if kind == "FINDOMME":
+        if "platform" in t or "loyalfans" in t or "onlyfans" in t or "fansly" in t:
+            return "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+        if "attract" in t or "get paypigs" in t or "marketing" in t:
+            return "Most beginners focus on promotion first, but what really converts is clarity, authority, and a repeatable structure."
+        return "A lot of beginner dommes underestimate how much paypig psychology drives everything, not just content or pricing."
+
+    if kind == "PAYPIG":
+        if "addict" in t or "addiction" in t or "can’t stop" in t:
+            return "If this feels compulsive rather than consensual fun, the first step is boundaries and a realistic plan, not shame."
+        if "safe" in t or "boundar" in t:
+            return "The safest way to approach this is to define boundaries first, then choose dynamics that respect them."
+        return "Most beginners get stuck because they only see the fantasy part, but the real challenge is balance and structure."
+
+    if kind == "MEDIA":
+        return "Mainstream references can be fun, but they usually simplify the dynamics, the real thing is more psychological than it looks."
+
+    return "If you are new to this, focus on understanding the dynamics first, the rest becomes much clearer after that."
 
 
 def send_email(subject: str, body_text: str, body_html: str) -> None:
@@ -143,14 +222,23 @@ def run():
             if not title or not link:
                 continue
 
+            age_h = hours_ago(created_ts)
+            kind = classify(feed_name, title)
+            score, reasons = compute_score(feed_name, title, age_h)
+            opening = suggested_opening(kind, title)
+
             item = {
                 "id": eid,
                 "created_utc": created_ts,
                 "created_iso": iso(created_ts),
+                "age_hours": age_h,
                 "feed": feed_name,
+                "kind": kind,
                 "title": title,
                 "url": link,
-                "priority": score_item(title),
+                "score": score,
+                "signals": reasons,
+                "opening": opening,
             }
             collected.append(item)
             seen.add(eid)
@@ -160,71 +248,106 @@ def run():
         if len(collected) >= max_items:
             break
 
-    collected.sort(key=lambda x: (x["priority"], x["created_utc"]), reverse=True)
+    collected.sort(key=lambda x: (x["score"], -x["age_hours"]), reverse=True)
 
     run_stamp = utc_now().strftime("%Y%m%d_%H%M%S")
     out_path = OUTPUT_DIR / f"queue_{run_stamp}.json"
     out_path.write_text(json.dumps(collected, indent=2), encoding="utf-8")
 
-    top = collected[:20]
+    # split
+    high_priority = [x for x in collected if x["score"] >= 10 and x["age_hours"] <= 12][:10]
+    paypig = [x for x in collected if x["kind"] == "PAYPIG"][:10]
+    findomme = [x for x in collected if x["kind"] == "FINDOMME"][:10]
+    other = [x for x in collected if x["kind"] not in ["PAYPIG", "FINDOMME"]][:10]
 
+    # plain text
     lines: list[str] = []
     lines.append("YMS Reddit queue (manual actions)")
     lines.append("")
-    lines.append("Suggested routine: pick 3 threads, reply with value, no selling.")
+    lines.append("Routine: pick 3 threads, reply with value, usually no links in the comment.")
     lines.append("")
     lines.append(f"Items collected: {len(collected)}")
     lines.append(f"Saved: {out_path}")
     lines.append("")
 
-    for i, it in enumerate(top, start=1):
-        lines.append(f"{i}. [{it['feed']}] (prio {it['priority']}) {it['title']}")
-        lines.append(f"   {it['url']}")
-        lines.append("   Action: reply with 3 to 6 sentences, add your perspective, link only if truly relevant.")
+    def add_block(name: str, items: list[dict]):
+        lines.append(name)
+        lines.append("-" * len(name))
+        if not items:
+            lines.append("None")
+            lines.append("")
+            return
+        for i, it in enumerate(items, start=1):
+            lines.append(f"{i}. [{it['kind']}] score {it['score']} age {it['age_hours']}h, signals: {', '.join(it['signals'])}")
+            lines.append(f"   {it['title']}")
+            lines.append(f"   {it['url']}")
+            lines.append(f"   Opening: {it['opening']}")
+            lines.append("")
         lines.append("")
 
-    if len(collected) == 0:
-        lines.append("No new items in the selected backfill window.")
+    add_block("HIGH PRIORITY (do these first)", high_priority)
+    add_block("PAYPIG LEADS", paypig)
+    add_block("FINDOMME LEADS", findomme)
+    add_block("OTHER", other)
 
-    subject = f"YMS Reddit queue: {len(collected)} new items"
+    subject = f"YMS Reddit leads: {len(collected)} new items"
     body_text = "\n".join(lines)
 
+    # HTML helpers
     def esc(s: str) -> str:
         return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-    def badge(feed_name: str) -> str:
-        t = (feed_name or "").lower()
-        if "findomme" in t or "platform" in t:
-            return '<span class="b b-findomme">FINDOMME</span>'
-        if "paypig" in t:
+    def badge(kind: str) -> str:
+        if kind == "PAYPIG":
             return '<span class="b b-paypig">PAYPIG</span>'
-        if "manga" in t or "media" in t:
+        if kind == "FINDOMME":
+            return '<span class="b b-findomme">FINDOMME</span>'
+        if kind == "MEDIA":
             return '<span class="b b-media">MEDIA</span>'
         return '<span class="b b-general">GENERAL</span>'
 
-    rows: list[str] = []
-    for i, it in enumerate(top, start=1):
-        title = esc(it.get("title", ""))
-        url = it.get("url", "")
-        feed = esc(it.get("feed", ""))
-        prio = it.get("priority", 0)
+    def render_table(items: list[dict]) -> str:
+        if not items:
+            return '<div class="empty">No items.</div>'
 
-        rows.append(
-            f"""
+        rows = []
+        for i, it in enumerate(items, start=1):
+            rows.append(
+                f"""
+                <tr>
+                  <td class="num">{i}</td>
+                  <td class="meta">
+                    {badge(it.get("kind","GENERAL"))}
+                    <div class="feed">{esc(it.get("feed",""))}</div>
+                    <div class="mini">score {it.get("score",0)} · {it.get("age_hours",0)}h</div>
+                    <div class="mini">signals: {esc(", ".join(it.get("signals", [])))}</div>
+                  </td>
+                  <td class="title">
+                    <div class="t">{esc(it.get("title",""))}</div>
+                    <div class="opening"><b>Opening:</b> {esc(it.get("opening",""))}</div>
+                  </td>
+                  <td class="cta">
+                    <a class="btn" href="{it.get("url","")}">Open</a>
+                  </td>
+                </tr>
+                """
+            )
+
+        return f"""
+        <table>
+          <thead>
             <tr>
-              <td class="num">{i}</td>
-              <td class="meta">
-                {badge(it.get("feed",""))}
-                <div class="feed">{feed}</div>
-                <div class="prio">prio {prio}</div>
-              </td>
-              <td class="title">{title}</td>
-              <td class="cta">
-                <a class="btn" href="{url}">Open</a>
-              </td>
+              <th>#</th>
+              <th>Type</th>
+              <th>Thread</th>
+              <th></th>
             </tr>
-            """
-        )
+          </thead>
+          <tbody>
+            {''.join(rows)}
+          </tbody>
+        </table>
+        """
 
     body_html = f"""
 <!doctype html>
@@ -241,7 +364,7 @@ def run():
       color: #111;
     }}
     .card {{
-      max-width: 900px;
+      max-width: 980px;
       margin: 0 auto;
       background: #fff;
       border-radius: 12px;
@@ -262,6 +385,11 @@ def run():
       font-size: 13px;
       margin: 10px 0 16px 0;
       color: #222;
+      line-height: 1.5;
+    }}
+    h2 {{
+      font-size: 14px;
+      margin: 18px 0 8px 0;
     }}
     table {{
       width: 100%;
@@ -285,17 +413,31 @@ def run():
       color: #666;
     }}
     .meta {{
-      width: 170px;
+      width: 220px;
     }}
     .feed {{
       font-weight: 700;
       margin-top: 6px;
     }}
-    .prio {{
+    .mini {{
       color: #666;
       margin-top: 2px;
+      font-size: 12px;
+      line-height: 1.35;
     }}
     .title {{
+      line-height: 1.35;
+    }}
+    .t {{
+      margin-bottom: 6px;
+    }}
+    .opening {{
+      color: #333;
+      font-size: 12px;
+      background: #fafbfc;
+      border: 1px solid #eef0f4;
+      border-radius: 10px;
+      padding: 8px 10px;
       line-height: 1.35;
     }}
     .cta {{
@@ -324,55 +466,48 @@ def run():
     .b-findomme {{ background: #eef2ff; border-color: #c7d2fe; }}
     .b-media {{ background: #f0fdf4; border-color: #bbf7d0; }}
     .b-general {{ background: #f8fafc; border-color: #e2e8f0; }}
-    .footer {{
-      margin-top: 14px;
-      font-size: 12px;
-      color: #555;
-      line-height: 1.4;
-    }}
     .rule {{
-      margin-top: 10px;
+      margin-top: 12px;
       padding: 10px 12px;
       background: #fafbfc;
       border: 1px solid #eef0f4;
       border-radius: 10px;
       font-size: 12px;
       color: #333;
+      line-height: 1.4;
+    }}
+    .empty {{
+      font-size: 13px;
+      color: #555;
+      padding: 10px 0;
     }}
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>YMS Reddit queue</h1>
-    <div class="sub">Pick 3 threads, reply with value, no selling. Usually no links in the comment.</div>
+    <h1>YMS Reddit leads</h1>
+    <div class="sub">Pick 3 threads, reply with value, usually no links in the comment. Your profile and pinned posts do the linking.</div>
 
     <div class="kpis">
       <b>Items collected:</b> {len(collected)}<br>
-      <b>Top shown:</b> {min(20, len(collected))}<br>
       <b>Saved file:</b> queue JSON committed in the repo output folder
     </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Type</th>
-          <th>Title</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {''.join(rows) if rows else '<tr><td colspan="4">No new items in the selected window.</td></tr>'}
-      </tbody>
-    </table>
 
     <div class="rule">
       Reply formula: 1 line context, 2 to 4 practical points, 1 question at the end.
     </div>
 
-    <div class="footer">
-      Tip: focus on threads with low competition and clear questions. Your profile and pinned posts do the linking.
-    </div>
+    <h2>HIGH PRIORITY</h2>
+    {render_table(high_priority)}
+
+    <h2>PAYPIG LEADS</h2>
+    {render_table(paypig)}
+
+    <h2>FINDOMME LEADS</h2>
+    {render_table(findomme)}
+
+    <h2>OTHER</h2>
+    {render_table(other)}
   </div>
 </body>
 </html>
