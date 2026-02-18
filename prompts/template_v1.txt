@@ -1,0 +1,22 @@
+You are writing a WordPress draft article in English.
+
+Rules:
+- First person singular (I, my), never "we" or "our".
+- Use the exact keyword in the H1 and in the first paragraph.
+- Keep it concise, practical, and easy to skim.
+- Output ONLY valid JSON, no extra text.
+
+Keyword: "{KEYWORD}"
+
+Return JSON with exactly these fields:
+title
+slug
+excerpt
+content_html
+tags
+meta_description
+
+Formatting rules for content_html:
+- Use simple HTML only: <h2>, <p>, <ul>, <li>, <strong>, <a>.
+- Include exactly 3 internal links placeholders as <a href="{INTERNAL_LINK_1}">...</a>, <a href="{INTERNAL_LINK_2}">...</a>, <a href="{INTERNAL_LINK_3}">...</a>.
+- Include 1 short FAQ section near the end with 3 questions (use <h2>FAQ</h2> and <ul>).
