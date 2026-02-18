@@ -1,3 +1,2 @@
 keyword,cluster,status,wp_post_id,last_error
-findom telegram etiquette,telegram,todo,,HTTPError: 400 Client Error: Bad Request for url: https://api.openai.com/v1/responses
-
+findom telegram etiquette,telegram,error,,RuntimeError: OpenAI returned empty output_text
