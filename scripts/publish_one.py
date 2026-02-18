@@ -92,14 +92,14 @@ def openai_generate_json(keyword: str) -> dict:
         "model": model,
         "input": prompt,
         "max_output_tokens": int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "900")),
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {
+        "text": {
+            "format": {
+                "type": "json_schema",
                 "name": "wp_draft",
-                "schema": schema,
                 "strict": True,
-            },
-        },
+                "schema": schema
+            }
+        }
     }
 
     r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=90)
@@ -108,7 +108,14 @@ def openai_generate_json(keyword: str) -> dict:
 
     # With json_schema, the parsed JSON is typically in output_text as JSON.
     # We safely parse the concatenated text.
-    text = data.get("output_text", "").strip()
+    text = ""
+    for item in data.get("output", []):
+        if item.get("type") == "message":
+            for c in item.get("content", []):
+                if c.get("type") == "output_text":
+                    text += c.get("text", "")
+    text = text.strip()
+
     if not text:
         raise RuntimeError("OpenAI returned empty output_text")
 
