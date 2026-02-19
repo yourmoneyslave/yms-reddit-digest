@@ -13,8 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 KEYWORDS_CSV = ROOT / "data" / "keywords.csv"
 PROMPT_FILE = ROOT / "prompts" / "template_v1.txt"
 CONFIG_FILE = ROOT / "config.json"
+LINKS_FILE = ROOT / "internal_links.json"
 
-
+def load_links() -> dict:
+    return json.loads(LINKS_FILE.read_text(encoding="utf-8"))
+    
 def slugify(text: str) -> str:
     text = (text or "").strip().lower()
     text = re.sub(r"[^a-z0-9\s-]", "", text)
@@ -62,20 +65,23 @@ def extract_output_text(resp: dict) -> str:
     return "".join(parts).strip()
 
 
-def openai_generate_json(keyword: str) -> dict:
+def openai_generate_json(keyword: str, links: list[str]) -> dict:
     api_key = os.environ["OPENAI_API_KEY"]
     model = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
 
     prompt_template = PROMPT_FILE.read_text(encoding="utf-8")
     prompt = prompt_template.replace("{KEYWORD}", keyword)
 
-    # Internal links placeholders (fixed for now)
+    # Use dynamic internal links based on cluster
+    if len(links) < 3:
+        raise RuntimeError("Internal links mapping must contain at least 3 URLs")
+    
     prompt = (
-        prompt.replace("{INTERNAL_LINK_1}", "https://yourmoneyslave.com/findom-telegram/")
-        .replace("{INTERNAL_LINK_2}", "https://yourmoneyslave.com/forum/")
-        .replace("{INTERNAL_LINK_3}", "https://yourmoneyslave.com/movies/")
+        prompt.replace("{INTERNAL_LINK_1}", links[0])
+        .replace("{INTERNAL_LINK_2}", links[1])
+        .replace("{INTERNAL_LINK_3}", links[2])
     )
-
+    
     url = "https://api.openai.com/v1/responses"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -193,7 +199,10 @@ def main() -> int:
         return 1
 
     try:
-        post = openai_generate_json(keyword)
+        cluster = (row.get("cluster") or "").strip().lower() or "default"
+        links_map = load_links()
+        links = links_map.get(cluster, links_map["default"])
+        post = openai_generate_json(keyword, links)
         post_id = wp_create_draft(post, guides_id)
 
         rows[idx]["status"] = "done"
