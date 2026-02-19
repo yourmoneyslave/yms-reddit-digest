@@ -109,6 +109,7 @@ def openai_generate_json(keyword: str) -> dict:
                 "content": [{"type": "input_text", "text": prompt}],
             }
         ],
+        "reasoning": {"effort": "low"},
         "max_output_tokens": int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "900")),
         "text": {
             "format": {
