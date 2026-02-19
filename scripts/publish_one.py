@@ -110,7 +110,6 @@ def openai_generate_json(keyword: str) -> dict:
             }
         ],
         "reasoning": {"effort": "low"},
-        "temperature": 0.2,
         "max_output_tokens": int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "900")),
         "text": {
             "format": {
