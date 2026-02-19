@@ -4,7 +4,6 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -17,7 +16,7 @@ CONFIG_FILE = ROOT / "config.json"
 
 
 def slugify(text: str) -> str:
-    text = text.strip().lower()
+    text = (text or "").strip().lower()
     text = re.sub(r"[^a-z0-9\s-]", "", text)
     text = re.sub(r"\s+", "-", text)
     text = re.sub(r"-{2,}", "-", text)
@@ -29,7 +28,7 @@ def load_config() -> dict:
 
 
 def read_first_todo_row() -> tuple[int, dict, list[dict]]:
-    rows = []
+    rows: list[dict] = []
     with KEYWORDS_CSV.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for r in reader:
@@ -49,6 +48,20 @@ def write_rows(rows: list[dict], fieldnames: list[str]) -> None:
         writer.writerows(rows)
 
 
+def extract_output_text(resp: dict) -> str:
+    parts: list[str] = []
+    for item in resp.get("output", []):
+        if item.get("type") != "message":
+            continue
+        for c in item.get("content", []):
+            ctype = c.get("type")
+            if ctype == "output_text":
+                parts.append(c.get("text", ""))
+            elif ctype == "refusal":
+                parts.append(c.get("refusal", ""))
+    return "".join(parts).strip()
+
+
 def openai_generate_json(keyword: str) -> dict:
     api_key = os.environ["OPENAI_API_KEY"]
     model = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
@@ -56,11 +69,11 @@ def openai_generate_json(keyword: str) -> dict:
     prompt_template = PROMPT_FILE.read_text(encoding="utf-8")
     prompt = prompt_template.replace("{KEYWORD}", keyword)
 
-    # Placeholders for internal links, you can later map them per cluster
+    # Internal links placeholders (fixed for now)
     prompt = (
         prompt.replace("{INTERNAL_LINK_1}", "https://yourmoneyslave.com/findom-telegram/")
-              .replace("{INTERNAL_LINK_2}", "https://yourmoneyslave.com/forum/")
-              .replace("{INTERNAL_LINK_3}", "https://yourmoneyslave.com/movies/")
+        .replace("{INTERNAL_LINK_2}", "https://yourmoneyslave.com/forum/")
+        .replace("{INTERNAL_LINK_3}", "https://yourmoneyslave.com/movies/")
     )
 
     url = "https://api.openai.com/v1/responses"
@@ -90,41 +103,42 @@ def openai_generate_json(keyword: str) -> dict:
 
     payload = {
         "model": model,
-        "input": prompt,
+        "input": [
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": prompt}],
+            }
+        ],
         "max_output_tokens": int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "900")),
         "text": {
             "format": {
                 "type": "json_schema",
                 "name": "wp_draft",
                 "strict": True,
-                "schema": schema
+                "schema": schema,
             }
-        }
+        },
+        # opzionale ma utile: evita storage lato OpenAI se non ti serve
+        "store": False,
     }
 
     r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=90)
-    r.raise_for_status()
+
+    if not r.ok:
+        raise RuntimeError(f"OpenAI HTTP {r.status_code}: {r.text[:1200]}")
+
     data = r.json()
 
-    # With json_schema, the parsed JSON is typically in output_text as JSON.
-    # We safely parse the concatenated text.
-    text = ""
-    for item in data.get("output", []):
-        if item.get("type") == "message":
-            for c in item.get("content", []):
-                if c.get("type") == "output_text":
-                    text += c.get("text", "")
-    text = text.strip()
-
+    text = extract_output_text(data)
     if not text:
-        raise RuntimeError("OpenAI returned empty output_text")
+        snippet = json.dumps(data, ensure_ascii=False)[:2000]
+        raise RuntimeError(f"OpenAI returned empty text. Response snippet: {snippet}")
 
     try:
         obj = json.loads(text)
     except json.JSONDecodeError as e:
-        raise RuntimeError(f"Failed to parse JSON from model output: {e}\nRaw:\n{text}")
+        raise RuntimeError(f"Failed to parse JSON from model output: {e}\nRaw:\n{text[:2000]}")
 
-    # Safety: normalize slug if needed
     obj["slug"] = slugify(obj.get("slug") or obj.get("title") or keyword)
     return obj
 
@@ -146,8 +160,7 @@ def wp_create_draft(post: dict, guides_category_id: int) -> int:
         "slug": post["slug"],
         "excerpt": post["excerpt"],
         "content": post["content_html"],
-        "categories": [int(guides_category_id)],
-        # tags via names requires extra step (create/get tag IDs), keep it minimal for now
+        "categories": [int(guides_category_id)],  # 628
     }
 
     url = f"{base_url}/wp-json/wp/v2/posts"
