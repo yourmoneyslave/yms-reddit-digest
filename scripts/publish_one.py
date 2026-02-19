@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 import requests
-
+import smtplib
+from email.mime.text import MIMEText
 
 ROOT = Path(__file__).resolve().parents[1]
 KEYWORDS_CSV = ROOT / "data" / "keywords.csv"
@@ -15,6 +16,40 @@ PROMPT_FILE = ROOT / "prompts" / "template_v1.txt"
 CONFIG_FILE = ROOT / "config.json"
 LINKS_FILE = ROOT / "internal_links.json"
 
+def send_notification_email(post_id: int, title: str, cluster: str):
+    smtp_host = os.environ.get("SMTP_HOST")
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ.get("SMTP_USER")
+    smtp_password = os.environ.get("SMTP_PASS")
+    to_email = os.environ.get("MAIL_TO")
+
+    if not all([smtp_host, smtp_user, smtp_password, to_email]):
+        print("Email config missing, skipping notification.")
+        return
+
+    wp_base = os.environ["WP_BASE_URL"].rstrip("/")
+    edit_link = f"{wp_base}/wp-admin/post.php?post={post_id}&action=edit"
+
+    subject = f"New Draft Created: {title}"
+    body = f"""
+New draft created.
+
+Title: {title}
+Cluster: {cluster}
+Edit link:
+{edit_link}
+"""
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = smtp_user
+    msg["To"] = to_email
+
+    with smtplib.SMTP(smtp_host, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+        
 def load_links() -> dict:
     return json.loads(LINKS_FILE.read_text(encoding="utf-8"))
     
@@ -216,6 +251,8 @@ def main() -> int:
         links = links_map.get(cluster, links_map["default"])
         post = openai_generate_json(keyword, links)
         post_id = wp_create_draft(post, guides_id)
+        cluster = (row.get("cluster") or "").strip().lower() or "default"
+        send_notification_email(post_id, post["title"], cluster)
 
         rows[idx]["status"] = "done"
         rows[idx]["wp_post_id"] = str(post_id)
