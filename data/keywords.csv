@@ -1,2 +1,3 @@
 keyword,cluster,status,wp_post_id,last_error
-findom telegram etiquette,telegram,error,,RuntimeError: OpenAI returned empty output_text
+findom telegram etiquette,telegram,todo,,RuntimeError: OpenAI returned empty output_text
+
