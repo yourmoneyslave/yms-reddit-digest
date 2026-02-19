@@ -1,10 +1,2 @@
 keyword,cluster,status,wp_post_id,last_error
-findom telegram etiquette,telegram,todo,,"RuntimeError: OpenAI HTTP 400: {
-  ""error"": {
-    ""message"": ""Unsupported parameter: 'temperature' is not supported with this model."",
-    ""type"": ""invalid_request_error"",
-    ""param"": ""temperature"",
-    ""code"": null
-  }
-}"
-
+findom telegram etiquette,telegram,done,5849,
