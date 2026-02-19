@@ -1,9 +1,9 @@
 keyword,cluster,status,wp_post_id,last_error
-findom telegram etiquette,telegram,todo,,"RuntimeError: Failed to parse JSON from model output: Unterminated string starting at: line 13 column 23 (char 2613)
-Raw:
-{
-  ""title"": ""findom telegram etiquette: Clear Rules for Respectful Exchanges"",
-  ""slug"": ""findom-telegram-etiquette"",
-  ""excerpt"": ""Practical findom telegram etiquette I use to stay safe, respectful, and efficient in payments and chats."",
-  ""content_html"": ""<h2>Quick guide</h2>\n<p>I follow strict findom telegram etiquette to keep interactions respectful, secure, and clear. These short rules help me avoid misunderstandings and protect both parties.</p>\n<ul>\n  <li><strong>Introduce yourself:</strong> Start with a brief intro and your boundaries before asking for tribute or services.</li>\n  <li><strong>Consent first:</strong> Never assume consent for payment types, photos, or contact outside Telegram.</li>\n  <li><strong>Set clear payment terms:</strong> State amounts, methods, and deadlines up front; confirm before sending invoices or payment requests.</li>\n  <li><strong>Use receipts:</strong> I always provide confirmation for received payments and keep simple records.</li>\n  <li><strong>Respect privacy:</strong> Avoid sharing personal info, and request the same from others only when necessary.</li>\n  <li><strong>Be punctual:</strong> If I promise feedback or content, I stick to the timeline or communicate delays.</li>\n  <li><strong>Handle disputes calmly:</strong> Clarify facts, share receipts, and offer reasonable solutions or refunds when appropriate.</li>\n</ul>\n<p>For community norms and deeper discussion see <a href=\""https://yourmoneyslave.com/findom-telegram/\"">community threads</a>, and for broader support check <a href=\""https://yourmoneyslave.com/forum/\"">the forum</a>. If you want light entertainment after a session, I sometimes recommend content from <a href=\""https://yourmoneyslave.com/movies/\"">related collections</a>.</p>\n<h2>When to block or leave</h2>\n<ul>\n  <li>I block immediately if I encounter threats, extortion, or repeated boundary violations.</li>\n  <li>I warn once for minor issues; if behavior continues I leave the chat and docum"
-
+findom telegram etiquette,telegram,error,,"RuntimeError: OpenAI HTTP 400: {
+  ""error"": {
+    ""message"": ""Unsupported parameter: 'temperature' is not supported with this model."",
+    ""type"": ""invalid_request_error"",
+    ""param"": ""temperature"",
+    ""code"": null
+  }
+}"
