@@ -136,6 +136,18 @@ def openai_generate_json(keyword: str, links: list[str]) -> dict:
 
     data = r.json()
 
+    # If the response is incomplete due to max_output_tokens, retry once with a higher limit
+    if data.get("status") == "incomplete":
+        details = data.get("incomplete_details") or {}
+        if details.get("reason") == "max_output_tokens":
+            bumped = int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS_BUMP", "2400"))
+            payload["max_output_tokens"] = bumped
+
+            r2 = requests.post(url, headers=headers, data=json.dumps(payload), timeout=90)
+            if not r2.ok:
+                raise RuntimeError(f"OpenAI HTTP {r2.status_code}: {r2.text[:1200]}")
+            data = r2.json()
+
     text = extract_output_text(data)
     if not text:
         snippet = json.dumps(data, ensure_ascii=False)[:2000]
