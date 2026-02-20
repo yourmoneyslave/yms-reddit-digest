@@ -7,8 +7,8 @@ how to avoid scams in findom telegram,telegram,done,5883,
 best findom telegram channels for paypigs,telegram,done,5884,
 what to expect from a findom telegram session,telegram,done,5885,
 how to approach a findom on telegram respectfully,telegram,done,5887,
-findom telegram red flags to watch for,telegram,error,,HTTPError: 400 Client Error: Bad Request for url: https://api.openai.com/v1/responses
-how I evaluate findom telegram profiles,telegram,error,,"RuntimeError: OpenAI HTTP 400: {
+findom telegram red flags to watch for,telegram,todo,,HTTPError: 400 Client Error: Bad Request for url: https://api.openai.com/v1/responses
+how I evaluate findom telegram profiles,telegram,todo,,"RuntimeError: OpenAI HTTP 400: {
   ""error"": {
     ""message"": ""Unsupported parameter: 'temperature' is not supported with this model."",
     ""type"": ""invalid_request_error"",
@@ -16,7 +16,7 @@ how I evaluate findom telegram profiles,telegram,error,,"RuntimeError: OpenAI HT
     ""code"": null
   }
 }"
-why findom telegram is different from twitter,telegram,error,,"RuntimeError: OpenAI HTTP 400: {
+why findom telegram is different from twitter,telegram,todo,,"RuntimeError: OpenAI HTTP 400: {
   ""error"": {
     ""message"": ""Unsupported parameter: 'temperature' is not supported with this model."",
     ""type"": ""invalid_request_error"",
@@ -44,3 +44,4 @@ findom movies for beginners,movies,todo,,
 are paid findom movies worth it,movies,todo,,
 how to avoid fake findom movies online,movies,todo,,
 why findom movies can shape expectations,movies,todo,,
+
