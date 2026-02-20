@@ -16,104 +16,21 @@ PROMPT_FILE = ROOT / "prompts" / "template_v1.txt"
 CONFIG_FILE = ROOT / "config.json"
 LINKS_FILE = ROOT / "internal_links.json"
 
-def humanize_text(content_html: str) -> str:
-    api_key = os.environ["OPENAI_API_KEY"]
-    model = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
 
-    url = "https://api.openai.com/v1/responses"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
+def load_config() -> dict:
+    return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
 
-    prompt = f"""
-Rewrite the following article to sound more naturally human.
-Keep meaning identical.
-Do not change structure.
-Vary sentence rhythm.
-Reduce predictability.
-Avoid em dashes.
-Return only the rewritten HTML.
 
-ARTICLE:
-{content_html}
-"""
-
-    payload = {
-        "model": model,
-        "input": prompt,
-        "reasoning": {"effort": "low"},
-        "max_output_tokens": 600,
-        "temperature": 0.4,
-        "store": False,
-    }
-
-    r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=90)
-    r.raise_for_status()
-    data = r.json()
-
-    text = extract_output_text(data)
-    return text if text else content_html
-    
-def send_notification_email(post_id: int, title: str, cluster: str):
-    smtp_host = os.environ.get("SMTP_HOST")
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-    smtp_user = os.environ.get("SMTP_USER")
-    smtp_password = os.environ.get("SMTP_PASS")
-
-    mail_from = os.environ.get("MAIL_FROM") or smtp_user
-    to_email = os.environ.get("MAIL_TO")
-
-    if not all([smtp_host, smtp_user, smtp_password, to_email]):
-        print("Email config missing, skipping notification.")
-        return
-
-    wp_base = os.environ["WP_BASE_URL"].rstrip("/")
-    edit_link = f"{wp_base}/wp-admin/post.php?post={post_id}&action=edit"
-
-    subject = f"[YMS] New Draft: {title}"
-
-    body = f"""New draft created.
-
-Title: {title}
-Cluster: {cluster}
-
-Edit link:
-{edit_link}
-
---
-YourMoneySlave SEO Bot
-"""
-
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = mail_from
-    msg["To"] = to_email
-
-    try:
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.send_message(msg)
-
-        print("Notification email sent successfully.")
-
-    except Exception as e:
-        print(f"Failed to send notification email: {e}")
-        
 def load_links() -> dict:
     return json.loads(LINKS_FILE.read_text(encoding="utf-8"))
-    
+
+
 def slugify(text: str) -> str:
     text = (text or "").strip().lower()
     text = re.sub(r"[^a-z0-9\s-]", "", text)
     text = re.sub(r"\s+", "-", text)
     text = re.sub(r"-{2,}", "-", text)
     return text.strip("-")[:80] or "draft"
-
-
-def load_config() -> dict:
-    return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
 
 
 def read_first_todo_row() -> tuple[int, dict, list[dict]]:
@@ -136,17 +53,7 @@ def write_rows(rows: list[dict], fieldnames: list[str]) -> None:
         writer.writeheader()
         writer.writerows(rows)
 
-def inject_personal_block(content_html: str, keyword: str) -> str:
-    personal_block = f"""
-<p><strong>My perspective:</strong> In my experience with {keyword}, most beginners overthink things. I have seen patterns repeat again and again. The difference usually comes down to awareness and boundaries, not intensity.</p>
-"""
 
-    # Insert before FAQ if exists
-    if "<h2>FAQ</h2>" in content_html:
-        return content_html.replace("<h2>FAQ</h2>", personal_block + "<h2>FAQ</h2>")
-    else:
-        return content_html + personal_block
-        
 def extract_output_text(resp: dict) -> str:
     parts: list[str] = []
     for item in resp.get("output", []):
@@ -161,28 +68,141 @@ def extract_output_text(resp: dict) -> str:
     return "".join(parts).strip()
 
 
-def openai_generate_json(keyword: str, links: list[str]) -> dict:
+def sanitize_content_html(html: str) -> str:
+    if not html:
+        return html
+
+    # remove any accidental H1 to avoid double H1 in WP
+    html = re.sub(r"<h1\b[^>]*>.*?</h1>", "", html, flags=re.IGNORECASE | re.DOTALL)
+
+    # replace em dash if it slipped in
+    html = html.replace("—", ", ")
+
+    return html.strip()
+
+
+def send_notification_email(post_id: int, title: str, cluster: str):
+    smtp_host = os.environ.get("SMTP_HOST")
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ.get("SMTP_USER")
+    smtp_password = os.environ.get("SMTP_PASS")
+
+    mail_from = os.environ.get("MAIL_FROM") or smtp_user
+    to_email = os.environ.get("MAIL_TO")
+
+    if not all([smtp_host, smtp_user, smtp_password, to_email]):
+        print("Email config missing, skipping notification.")
+        return
+
+    wp_base = os.environ["WP_BASE_URL"].rstrip("/")
+    edit_link = f"{wp_base}/wp-admin/post.php?post={post_id}&action=edit"
+
+    subject = f"[YMS] New Draft: {title}"
+    body = f"""New draft created.
+
+Title: {title}
+Cluster: {cluster}
+
+Edit link:
+{edit_link}
+
+--
+YourMoneySlave SEO Bot
+"""
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = mail_from
+    msg["To"] = to_email
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        print("Notification email sent successfully.")
+    except Exception as e:
+        print(f"Failed to send notification email: {e}")
+
+
+def openai_call(payload: dict) -> dict:
     api_key = os.environ["OPENAI_API_KEY"]
+    url = "https://api.openai.com/v1/responses"
+    headers = {"Authorization": f"Bearer {api_key}"}
+
+    r = requests.post(url, headers=headers, json=payload, timeout=90)
+    if not r.ok:
+        raise RuntimeError(f"OpenAI HTTP {r.status_code}: {r.text[:2000]}")
+    return r.json()
+
+
+def humanize_text(content_html: str) -> str:
+    model = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
+    max_out = int(os.environ.get("OPENAI_HUMANIZE_MAX_OUTPUT_TOKENS", "650"))
+    bump_out = int(os.environ.get("OPENAI_HUMANIZE_MAX_OUTPUT_TOKENS_BUMP", "1100"))
+
+    prompt = (
+        "Rewrite the following article to sound more naturally human.\n"
+        "Keep meaning identical.\n"
+        "Do not change structure.\n"
+        "Vary sentence rhythm.\n"
+        "Reduce predictability.\n"
+        "Avoid em dashes.\n"
+        "Return only the rewritten HTML.\n\n"
+        "ARTICLE:\n"
+        f"{content_html}"
+    )
+
+    payload = {
+        "model": model,
+        "input": [
+            {"role": "user", "content": [{"type": "input_text", "text": prompt}]}
+        ],
+        "reasoning": {"effort": "low"},
+        "max_output_tokens": max_out,
+        "temperature": 0.4,
+        "store": False,
+    }
+
+    data = openai_call(payload)
+
+    # retry once if truncated
+    if data.get("status") == "incomplete":
+        details = data.get("incomplete_details") or {}
+        if details.get("reason") == "max_output_tokens":
+            payload["max_output_tokens"] = bump_out
+            data = openai_call(payload)
+
+    text = extract_output_text(data)
+    return text.strip() if text else content_html
+
+
+def inject_personal_block(content_html: str, keyword: str) -> str:
+    personal_block = (
+        f"<p><strong>My perspective:</strong> In my experience with {keyword}, "
+        "most beginners overthink things. I have seen patterns repeat again and again. "
+        "The difference usually comes down to awareness and boundaries, not intensity.</p>"
+    )
+
+    if "<h2>FAQ</h2>" in content_html:
+        return content_html.replace("<h2>FAQ</h2>", personal_block + "<h2>FAQ</h2>")
+    return content_html + "\n" + personal_block
+
+
+def openai_generate_json(keyword: str, links: list[str]) -> dict:
     model = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
 
     prompt_template = PROMPT_FILE.read_text(encoding="utf-8")
     prompt = prompt_template.replace("{KEYWORD}", keyword)
 
-    # Use dynamic internal links based on cluster
     if len(links) < 3:
         raise RuntimeError("Internal links mapping must contain at least 3 URLs")
-    
+
     prompt = (
         prompt.replace("{INTERNAL_LINK_1}", links[0])
         .replace("{INTERNAL_LINK_2}", links[1])
         .replace("{INTERNAL_LINK_3}", links[2])
     )
-    
-    url = "https://api.openai.com/v1/responses"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
 
     schema = {
         "type": "object",
@@ -206,13 +226,11 @@ def openai_generate_json(keyword: str, links: list[str]) -> dict:
     payload = {
         "model": model,
         "input": [
-            {
-                "role": "user",
-                "content": [{"type": "input_text", "text": prompt}],
-            }
+            {"role": "user", "content": [{"type": "input_text", "text": prompt}]}
         ],
         "reasoning": {"effort": "low"},
-        "max_output_tokens": int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "900")),
+        "max_output_tokens": int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "1100")),
+        "temperature": float(os.environ.get("OPENAI_TEMPERATURE", "0.2")),
         "text": {
             "format": {
                 "type": "json_schema",
@@ -221,28 +239,18 @@ def openai_generate_json(keyword: str, links: list[str]) -> dict:
                 "schema": schema,
             }
         },
-        # opzionale ma utile: evita storage lato OpenAI se non ti serve
         "store": False,
     }
 
-    r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=90)
+    data = openai_call(payload)
 
-    if not r.ok:
-        raise RuntimeError(f"OpenAI HTTP {r.status_code}: {r.text[:1200]}")
-
-    data = r.json()
-
-    # If the response is incomplete due to max_output_tokens, retry once with a higher limit
+    # retry once if truncated
     if data.get("status") == "incomplete":
         details = data.get("incomplete_details") or {}
         if details.get("reason") == "max_output_tokens":
             bumped = int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS_BUMP", "2400"))
             payload["max_output_tokens"] = bumped
-
-            r2 = requests.post(url, headers=headers, data=json.dumps(payload), timeout=90)
-            if not r2.ok:
-                raise RuntimeError(f"OpenAI HTTP {r2.status_code}: {r2.text[:1200]}")
-            data = r2.json()
+            data = openai_call(payload)
 
     text = extract_output_text(data)
     if not text:
@@ -253,9 +261,11 @@ def openai_generate_json(keyword: str, links: list[str]) -> dict:
         obj = json.loads(text)
     except json.JSONDecodeError as e:
         raise RuntimeError(f"Failed to parse JSON from model output: {e}\nRaw:\n{text[:2000]}")
-    
+
+    # Post processing: humanize + personal block + sanitize
     obj["content_html"] = humanize_text(obj["content_html"])
     obj["content_html"] = inject_personal_block(obj["content_html"], keyword)
+    obj["content_html"] = sanitize_content_html(obj["content_html"])
 
     obj["slug"] = slugify(obj.get("slug") or obj.get("title") or keyword)
     return obj
@@ -278,11 +288,11 @@ def wp_create_draft(post: dict, guides_category_id: int) -> int:
         "slug": post["slug"],
         "excerpt": post["excerpt"],
         "content": post["content_html"],
-        "categories": [int(guides_category_id)],  # 628
+        "categories": [int(guides_category_id)],
     }
 
     url = f"{base_url}/wp-json/wp/v2/posts"
-    r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=90)
+    r = requests.post(url, headers=headers, json=payload, timeout=90)
     r.raise_for_status()
     created = r.json()
     return int(created["id"])
@@ -313,9 +323,9 @@ def main() -> int:
         cluster = (row.get("cluster") or "").strip().lower() or "default"
         links_map = load_links()
         links = links_map.get(cluster, links_map["default"])
+
         post = openai_generate_json(keyword, links)
         post_id = wp_create_draft(post, guides_id)
-        cluster = (row.get("cluster") or "").strip().lower() or "default"
         send_notification_email(post_id, post["title"], cluster)
 
         rows[idx]["status"] = "done"
