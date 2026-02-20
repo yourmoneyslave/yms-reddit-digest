@@ -21,12 +21,9 @@ def send_notification_email(post_id: int, title: str, cluster: str):
     smtp_port = int(os.environ.get("SMTP_PORT", "587"))
     smtp_user = os.environ.get("SMTP_USER")
     smtp_password = os.environ.get("SMTP_PASS")
-    to_email = os.environ.get("MAIL_TO")
 
-    print("SMTP_HOST:", bool(os.environ.get("SMTP_HOST")))
-    print("SMTP_USER:", bool(os.environ.get("SMTP_USER")))
-    print("SMTP_PASSWORD:", bool(os.environ.get("SMTP_PASS")))
-    print("NOTIFY_EMAIL_TO:", bool(os.environ.get("MAIL_TO")))
+    mail_from = os.environ.get("MAIL_FROM") or smtp_user
+    to_email = os.environ.get("MAIL_TO")
 
     if not all([smtp_host, smtp_user, smtp_password, to_email]):
         print("Email config missing, skipping notification.")
@@ -35,25 +32,35 @@ def send_notification_email(post_id: int, title: str, cluster: str):
     wp_base = os.environ["WP_BASE_URL"].rstrip("/")
     edit_link = f"{wp_base}/wp-admin/post.php?post={post_id}&action=edit"
 
-    subject = f"New Draft Created: {title}"
-    body = f"""
-New draft created.
+    subject = f"[YMS] New Draft: {title}"
+
+    body = f"""New draft created.
 
 Title: {title}
 Cluster: {cluster}
+
 Edit link:
 {edit_link}
+
+--
+YourMoneySlave SEO Bot
 """
 
     msg = MIMEText(body)
     msg["Subject"] = subject
-    msg["From"] = smtp_user
+    msg["From"] = mail_from
     msg["To"] = to_email
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.send_message(msg)
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+
+        print("Notification email sent successfully.")
+
+    except Exception as e:
+        print(f"Failed to send notification email: {e}")
         
 def load_links() -> dict:
     return json.loads(LINKS_FILE.read_text(encoding="utf-8"))
