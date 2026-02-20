@@ -16,6 +16,45 @@ PROMPT_FILE = ROOT / "prompts" / "template_v1.txt"
 CONFIG_FILE = ROOT / "config.json"
 LINKS_FILE = ROOT / "internal_links.json"
 
+def humanize_text(content_html: str) -> str:
+    api_key = os.environ["OPENAI_API_KEY"]
+    model = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
+
+    url = "https://api.openai.com/v1/responses"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    prompt = f"""
+Rewrite the following article to sound more naturally human.
+Keep meaning identical.
+Do not change structure.
+Vary sentence rhythm.
+Reduce predictability.
+Avoid em dashes.
+Return only the rewritten HTML.
+
+ARTICLE:
+{content_html}
+"""
+
+    payload = {
+        "model": model,
+        "input": prompt,
+        "reasoning": {"effort": "low"},
+        "max_output_tokens": 600,
+        "temperature": 0.4,
+        "store": False,
+    }
+
+    r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=90)
+    r.raise_for_status()
+    data = r.json()
+
+    text = extract_output_text(data)
+    return text if text else content_html
+    
 def send_notification_email(post_id: int, title: str, cluster: str):
     smtp_host = os.environ.get("SMTP_HOST")
     smtp_port = int(os.environ.get("SMTP_PORT", "587"))
@@ -97,7 +136,17 @@ def write_rows(rows: list[dict], fieldnames: list[str]) -> None:
         writer.writeheader()
         writer.writerows(rows)
 
+def inject_personal_block(content_html: str, keyword: str) -> str:
+    personal_block = f"""
+<p><strong>My perspective:</strong> In my experience with {keyword}, most beginners overthink things. I have seen patterns repeat again and again. The difference usually comes down to awareness and boundaries, not intensity.</p>
+"""
 
+    # Insert before FAQ if exists
+    if "<h2>FAQ</h2>" in content_html:
+        return content_html.replace("<h2>FAQ</h2>", personal_block + "<h2>FAQ</h2>")
+    else:
+        return content_html + personal_block
+        
 def extract_output_text(resp: dict) -> str:
     parts: list[str] = []
     for item in resp.get("output", []):
@@ -204,6 +253,9 @@ def openai_generate_json(keyword: str, links: list[str]) -> dict:
         obj = json.loads(text)
     except json.JSONDecodeError as e:
         raise RuntimeError(f"Failed to parse JSON from model output: {e}\nRaw:\n{text[:2000]}")
+    
+    obj["content_html"] = humanize_text(obj["content_html"])
+    obj["content_html"] = inject_personal_block(obj["content_html"], keyword)
 
     obj["slug"] = slugify(obj.get("slug") or obj.get("title") or keyword)
     return obj
