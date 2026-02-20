@@ -8,6 +8,9 @@ Rules:
 - Keep it concise, practical, and easy to skim.
 - The title MUST be written in CamelCase, so every word has to be capitalized (don't write "this is the title" but instead "This Is The Title")
 - Output ONLY valid JSON, no extra text.
+- Do not follow a rigid pattern like H2 followed by a list every time.
+- Sometimes use plain paragraphs instead of lists.
+- Occasionally insert a short standalone sentence paragraph.
 Style:
 - Write in clear, simple English, first person singular.
 - Short paragraphs, practical tone, no hype.
@@ -23,6 +26,8 @@ Human texture:
 - Use a slightly conversational tone, but remain clear and practical.
 - Do not sound like a textbook or AI-generated guide.
 - Avoid em dashes. Use commas or full stops instead.
+- Occasionally express uncertainty or nuance (e.g. "It depends", "This is not always obvious", "Some people disagree").
+- Avoid sounding definitive or perfectly structured.
 
 Keyword: "{KEYWORD}"
 
