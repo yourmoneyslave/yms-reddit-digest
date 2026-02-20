@@ -6,6 +6,7 @@ Rules:
 - content_html must start with a <p> and never contain <h1>.
 - Use the exact keyword in the title field, and naturally in the first paragraph of content_html.
 - Keep it concise, practical, and easy to skim.
+- The title MUST be written in CamelCase, so every word has to be capitalized (don't write "this is the title" but instead "This Is The Title")
 - Output ONLY valid JSON, no extra text.
 Style:
 - Write in clear, simple English, first person singular.
