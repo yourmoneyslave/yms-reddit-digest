@@ -32,8 +32,9 @@ Formatting rules for content_html:
   2) one in the middle,
   3) one near the end.
 - Each link must be inside a natural sentence, not a standalone link list.
-Use these exact placeholders:
+Use these exact placeholders (substitute "..." with an anchor text that makes sense in the sentence):
 <a href="{INTERNAL_LINK_1}">...</a>
 <a href="{INTERNAL_LINK_2}">...</a>
 <a href="{INTERNAL_LINK_3}">...</a>
+- Never show the actual links in the post, all those links must be on an anchor text optimized for the content
 - Include 1 short FAQ section near the end with 3 questions (use <h2>FAQ</h2> and <ul>).
