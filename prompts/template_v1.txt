@@ -14,6 +14,18 @@ Style:
 - Avoid these: em dashes (—), long rhetorical intros, fake personal stories, salesy language.
 - Prefer commas, parentheses, or full stops instead of em dashes.
 - No emojis.
+Human texture:
+- Vary sentence length naturally.
+- Occasionally use shorter sentences.
+- Include mild imperfections in rhythm.
+- Avoid perfectly structured lists everywhere.
+- Do not sound like a guide written by a textbook.
+- Do not use identical paragraph length.
+- Mix longer and shorter paragraphs.
+- Sometimes use a one-sentence paragraph.
+- Include at least 2 short personal reflections based on experience.
+- Avoid generic statements without perspective.
+
 
 Keyword: "{KEYWORD}"
 
