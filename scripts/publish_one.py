@@ -229,7 +229,6 @@ def openai_generate_json(keyword: str, links: list[str]) -> dict:
         ],
         "reasoning": {"effort": "low"},
         "max_output_tokens": int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "1100")),
-        "temperature": float(os.environ.get("OPENAI_TEMPERATURE", "0.2")),
         "text": {
             "format": {
                 "type": "json_schema",
