@@ -177,16 +177,17 @@ def humanize_text(content_html: str) -> str:
 
 
 def inject_personal_block(content_html: str, keyword: str) -> str:
-    personal_block = (
-        f"<p><strong>My perspective:</strong> In my experience with {keyword}, "
-        "most beginners overthink things. I have seen patterns repeat again and again. "
-        "The difference usually comes down to awareness and boundaries, not intensity.</p>"
-    )
+    variations = [
+        f"<p><strong>My perspective:</strong> I used to misunderstand {keyword} when I first explored it. Over time I noticed that what really matters is consistency, not intensity.</p>",
+        f"<p><strong>My perspective:</strong> With {keyword}, I have seen people focus on the wrong signals. The real difference is usually subtle.</p>",
+        f"<p><strong>My perspective:</strong> Not everyone agrees on how {keyword} should work. From what I have observed, clarity beats drama every time.</p>",
+    ]
+
+    block = variations[hash(keyword) % len(variations)]
 
     if "<h2>FAQ</h2>" in content_html:
-        return content_html.replace("<h2>FAQ</h2>", personal_block + "<h2>FAQ</h2>")
-    return content_html + "\n" + personal_block
-
+        return content_html.replace("<h2>FAQ</h2>", block + "<h2>FAQ</h2>")
+    return content_html + "\n" + block
 
 def openai_generate_json(keyword: str, links: list[str]) -> dict:
     model = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
@@ -264,6 +265,8 @@ def openai_generate_json(keyword: str, links: list[str]) -> dict:
     obj["content_html"] = humanize_text(obj["content_html"])
     obj["content_html"] = inject_personal_block(obj["content_html"], keyword)
     obj["content_html"] = sanitize_content_html(obj["content_html"])
+    # slight natural variation in rhythm
+    obj["content_html"] = obj["content_html"].replace("However,", "Still,")
 
     obj["slug"] = slugify(obj.get("slug") or obj.get("title") or keyword)
     return obj
