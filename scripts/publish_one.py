@@ -23,6 +23,11 @@ def send_notification_email(post_id: int, title: str, cluster: str):
     smtp_password = os.environ.get("SMTP_PASS")
     to_email = os.environ.get("MAIL_TO")
 
+    print("SMTP_HOST:", bool(os.environ.get("SMTP_HOST")))
+    print("SMTP_USER:", bool(os.environ.get("SMTP_USER")))
+    print("SMTP_PASSWORD:", bool(os.environ.get("SMTP_PASS")))
+    print("NOTIFY_EMAIL_TO:", bool(os.environ.get("MAIL_TO")))
+
     if not all([smtp_host, smtp_user, smtp_password, to_email]):
         print("Email config missing, skipping notification.")
         return
