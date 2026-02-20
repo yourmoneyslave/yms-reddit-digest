@@ -16,7 +16,14 @@ how I evaluate findom telegram profiles,telegram,error,,"RuntimeError: OpenAI HT
     ""code"": null
   }
 }"
-why findom telegram is different from twitter,telegram,todo,,
+why findom telegram is different from twitter,telegram,error,,"RuntimeError: OpenAI HTTP 400: {
+  ""error"": {
+    ""message"": ""Unsupported parameter: 'temperature' is not supported with this model."",
+    ""type"": ""invalid_request_error"",
+    ""param"": ""temperature"",
+    ""code"": null
+  }
+}"
 best findom forums for paypigs,forum,todo,,
 how to behave on a findom forum,forum,todo,,
 are findom forums still active in 2026,forum,todo,,
