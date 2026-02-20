@@ -16,16 +16,13 @@ Style:
 - No emojis.
 Human texture:
 - Vary sentence length naturally.
-- Occasionally use shorter sentences.
-- Include mild imperfections in rhythm.
-- Avoid perfectly structured lists everywhere.
-- Do not sound like a guide written by a textbook.
-- Do not use identical paragraph length.
-- Mix longer and shorter paragraphs.
-- Sometimes use a one-sentence paragraph.
+- Occasionally use very short sentences.
+- Avoid perfectly balanced paragraph structure.
+- Do not use formulaic transitions like "In conclusion" or "Overall".
 - Include at least 2 short personal reflections based on experience.
-- Avoid generic statements without perspective.
-
+- Use a slightly conversational tone, but remain clear and practical.
+- Do not sound like a textbook or AI-generated guide.
+- Avoid em dashes. Use commas or full stops instead.
 
 Keyword: "{KEYWORD}"
 
