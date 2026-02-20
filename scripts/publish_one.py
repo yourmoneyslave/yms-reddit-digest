@@ -160,7 +160,6 @@ def humanize_text(content_html: str) -> str:
         ],
         "reasoning": {"effort": "low"},
         "max_output_tokens": max_out,
-        "temperature": 0.4,
         "store": False,
     }
 
