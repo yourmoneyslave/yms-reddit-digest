@@ -1,0 +1,106 @@
+{
+  "global": {
+    "language": "en",
+    "blacklist": [
+      "escort",
+      "underage",
+      "minor",
+      "illegal",
+      "scam",
+      "free porn",
+      "torrent",
+      "rape",
+      "blackmail real",
+      "non consensual"
+    ],
+    "format_rules": {
+      "min_words": 4,
+      "max_words": 12,
+      "long_tail": true,
+      "intent_focus": true,
+      "avoid_duplicates": true,
+      "avoid_generic_terms": true
+    },
+    "generation_rules": {
+      "search_intent_types": [
+        "informational",
+        "how_to",
+        "problem_solving",
+        "comparison",
+        "emotional_conflict"
+      ],
+      "tone": "educational but emotionally aware",
+      "avoid_explicit_language": true
+    }
+  },
+  "clusters": [
+    {
+      "cluster": "paypig_entry",
+      "monetization_goal": "drive_new_subs_to_live_dommes_and_beginner_guides",
+      "priority_weight": 1.2,
+      "seed_topics": [
+        "first findom session",
+        "how to approach a financial dominatrix",
+        "findom beginner guide",
+        "setting a tribute budget",
+        "findom etiquette rules",
+        "safe financial domination",
+        "live findom expectations",
+        "online findom session structure",
+        "how to prepare for findom",
+        "is findom safe"
+      ]
+    },
+    {
+      "cluster": "paypig_psychology",
+      "monetization_goal": "capture_emotional_traffic_and_redirect_to_dommes",
+      "priority_weight": 1.0,
+      "seed_topics": [
+        "guilt after findom",
+        "findom addiction vs submission",
+        "why am I attracted to financial domination",
+        "power exchange psychology",
+        "shame in financial domination",
+        "compulsion vs kink",
+        "emotional triggers in findom",
+        "self control in submission",
+        "why I crave humiliation",
+        "confusion after tribute"
+      ]
+    },
+    {
+      "cluster": "domme_training",
+      "monetization_goal": "attract_aspiring_dommes_and_push_revshare_program",
+      "priority_weight": 1.3,
+      "seed_topics": [
+        "how to become a financial dominatrix",
+        "how to price findom sessions",
+        "screening submissives online",
+        "setting tribute rules",
+        "handling timewasters",
+        "building authority as a domme",
+        "findom marketing basics",
+        "live session control techniques",
+        "managing multiple subs",
+        "how to structure a findom session"
+      ]
+    },
+    {
+      "cluster": "session_dynamics",
+      "monetization_goal": "bridge_educational_content_and_live_sessions",
+      "priority_weight": 1.0,
+      "seed_topics": [
+        "tribute etiquette",
+        "live humiliation dynamics",
+        "control vs degradation",
+        "budget agreements in findom",
+        "session boundaries discussion",
+        "aftercare in financial domination",
+        "consent negotiation in findom",
+        "long term sub management",
+        "findom rituals",
+        "power exchange communication"
+      ]
+    }
+  ]
+}
