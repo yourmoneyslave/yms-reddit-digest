@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -15,6 +16,9 @@ KEYWORDS_CSV = ROOT / "data" / "keywords.csv"
 PROMPT_FILE = ROOT / "prompts" / "template_v1.txt"
 CONFIG_FILE = ROOT / "config.json"
 LINKS_FILE = ROOT / "internal_links.json"
+
+AUTO_SCHEDULE = os.getenv("AUTO_SCHEDULE", "false").lower() == "true"
+SCHEDULE_HOUR_UTC = int(os.getenv("SCHEDULE_HOUR_UTC", "7"))
 
 
 def load_config() -> dict:
@@ -81,7 +85,7 @@ def sanitize_content_html(html: str) -> str:
     return html.strip()
 
 
-def send_notification_email(post_id: int, title: str, cluster: str):
+def send_notification_email(post_id: int, title: str, cluster: str, wp_status: str, date_gmt: str | None):
     smtp_host = os.environ.get("SMTP_HOST")
     smtp_port = int(os.environ.get("SMTP_PORT", "587"))
     smtp_user = os.environ.get("SMTP_USER")
@@ -97,12 +101,14 @@ def send_notification_email(post_id: int, title: str, cluster: str):
     wp_base = os.environ["WP_BASE_URL"].rstrip("/")
     edit_link = f"{wp_base}/wp-admin/post.php?post={post_id}&action=edit"
 
-    subject = f"[YMS] New Draft: {title}"
-    body = f"""New draft created.
+    subject = f"[YMS] New Post: {title} ({wp_status})"
+    when = f"\nScheduled (date_gmt): {date_gmt}\n" if date_gmt else "\n"
+
+    body = f"""New post created.
 
 Title: {title}
 Cluster: {cluster}
-
+Status: {wp_status}{when}
 Edit link:
 {edit_link}
 
@@ -189,6 +195,7 @@ def inject_personal_block(content_html: str, keyword: str) -> str:
         return content_html.replace("<h2>FAQ</h2>", block + "<h2>FAQ</h2>")
     return content_html + "\n" + block
 
+
 def openai_generate_json(keyword: str, links: list[str]) -> dict:
     model = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
 
@@ -265,14 +272,13 @@ def openai_generate_json(keyword: str, links: list[str]) -> dict:
     obj["content_html"] = humanize_text(obj["content_html"])
     obj["content_html"] = inject_personal_block(obj["content_html"], keyword)
     obj["content_html"] = sanitize_content_html(obj["content_html"])
-    # slight natural variation in rhythm
     obj["content_html"] = obj["content_html"].replace("However,", "Still,")
 
     obj["slug"] = slugify(obj.get("slug") or obj.get("title") or keyword)
     return obj
 
 
-def wp_create_draft(post: dict, guides_category_id: int) -> int:
+def _wp_headers() -> tuple[str, dict]:
     base_url = os.environ["WP_BASE_URL"].rstrip("/")
     wp_user = os.environ["WP_USER"]
     wp_app_password = os.environ["WP_APP_PASSWORD"]
@@ -282,6 +288,45 @@ def wp_create_draft(post: dict, guides_category_id: int) -> int:
         "Authorization": f"Basic {token}",
         "Content-Type": "application/json",
     }
+    return base_url, headers
+
+
+def _iso_gmt(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def get_last_scheduled_post_date_gmt(base_url: str, headers: dict) -> datetime | None:
+    url = f"{base_url}/wp-json/wp/v2/posts?status=future&per_page=1&orderby=date&order=desc"
+    r = requests.get(url, headers=headers, timeout=60)
+    r.raise_for_status()
+    items = r.json()
+    if not items:
+        return None
+
+    s = items[0].get("date_gmt")
+    if not s:
+        return None
+
+    # WP date_gmt is usually "YYYY-MM-DDTHH:MM:SS"
+    return datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(timezone.utc)
+
+
+def compute_next_slot_gmt(last_scheduled_gmt: datetime | None) -> datetime:
+    now = datetime.now(timezone.utc)
+
+    slot = now.replace(hour=SCHEDULE_HOUR_UTC, minute=0, second=0, microsecond=0)
+    if now >= slot:
+        slot = slot + timedelta(days=1)
+
+    if last_scheduled_gmt is None:
+        return slot
+
+    candidate = max(slot, last_scheduled_gmt.replace(microsecond=0) + timedelta(days=1))
+    return candidate
+
+
+def wp_create_post(post: dict, guides_category_id: int) -> tuple[int, str, str | None]:
+    base_url, headers = _wp_headers()
 
     payload = {
         "status": "draft",
@@ -292,11 +337,41 @@ def wp_create_draft(post: dict, guides_category_id: int) -> int:
         "categories": [int(guides_category_id)],
     }
 
+    date_gmt_out: str | None = None
+    if AUTO_SCHEDULE:
+        last_gmt = get_last_scheduled_post_date_gmt(base_url, headers)
+        next_gmt = compute_next_slot_gmt(last_gmt)
+        date_gmt_out = _iso_gmt(next_gmt)
+        payload["status"] = "future"
+        payload["date_gmt"] = date_gmt_out
+
     url = f"{base_url}/wp-json/wp/v2/posts"
     r = requests.post(url, headers=headers, json=payload, timeout=90)
     r.raise_for_status()
     created = r.json()
-    return int(created["id"])
+
+    post_id = int(created["id"])
+    wp_status = str(created.get("status") or payload["status"])
+    return post_id, wp_status, date_gmt_out
+
+
+def ensure_csv_fields(rows: list[dict]) -> list[str]:
+    # ensure the CSV keeps these columns even if older rows did not have them
+    desired = ["keyword", "cluster", "status", "wp_post_id", "last_error", "created_at", "published_at"]
+
+    if not rows:
+        return desired
+
+    current = list(rows[0].keys())
+    for col in desired:
+        if col not in current:
+            current.append(col)
+
+    for r in rows:
+        for col in desired:
+            r.setdefault(col, "")
+
+    return current
 
 
 def main() -> int:
@@ -312,11 +387,12 @@ def main() -> int:
         print("No todo keywords found. Nothing to do.")
         return 0
 
+    fieldnames = ensure_csv_fields(rows)
+
     keyword = (row.get("keyword") or "").strip()
     if not keyword:
         rows[idx]["status"] = "error"
         rows[idx]["last_error"] = "Empty keyword"
-        fieldnames = list(rows[0].keys()) if rows else ["keyword", "cluster", "status", "wp_post_id", "last_error"]
         write_rows(rows, fieldnames)
         return 1
 
@@ -326,22 +402,26 @@ def main() -> int:
         links = links_map.get(cluster, links_map["default"])
 
         post = openai_generate_json(keyword, links)
-        post_id = wp_create_draft(post, guides_id)
-        send_notification_email(post_id, post["title"], cluster)
+        post_id, wp_status, date_gmt = wp_create_post(post, guides_id)
 
-        rows[idx]["status"] = "done"
+        print(f"AUTO_SCHEDULE={AUTO_SCHEDULE}, wp_status={wp_status}, date_gmt={date_gmt}")
+
+        send_notification_email(post_id, post["title"], cluster, wp_status, date_gmt)
+
+        # Update CSV row status to match pipeline states
+        rows[idx]["status"] = "future" if wp_status == "future" else "draft"
         rows[idx]["wp_post_id"] = str(post_id)
         rows[idx]["last_error"] = ""
-        print(f"Created draft post_id={post_id} for keyword='{keyword}' in category_id={guides_id}")
+        # published_at remains empty until a later job marks it
+
+        print(f"Created post_id={post_id} for keyword='{keyword}' in category_id={guides_id}")
 
     except Exception as e:
         rows[idx]["status"] = "error"
         rows[idx]["last_error"] = f"{type(e).__name__}: {e}"
         print(f"ERROR for keyword='{keyword}': {e}", file=sys.stderr)
 
-    fieldnames = list(rows[0].keys()) if rows else ["keyword", "cluster", "status", "wp_post_id", "last_error"]
     write_rows(rows, fieldnames)
-
     return 0
 
 
