@@ -290,6 +290,28 @@ def _wp_headers() -> tuple[str, dict]:
     }
     return base_url, headers
 
+def wp_fetch_recent_links_by_category(base_url: str, headers: dict, category_id: int, limit: int = 2) -> list[str]:
+    if not category_id or int(category_id) <= 0:
+        return []
+
+    url = f"{base_url}/wp-json/wp/v2/posts"
+    params = {
+        "status": "publish",
+        "per_page": limit,
+        "orderby": "date",
+        "order": "desc",
+        "categories": str(int(category_id)),
+        "_fields": "link",
+    }
+    r = requests.get(url, headers=headers, params=params, timeout=60)
+    r.raise_for_status()
+    items = r.json()
+    out: list[str] = []
+    for it in items:
+        link = (it.get("link") or "").strip()
+        if link:
+            out.append(link)
+    return out
 
 def _iso_gmt(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -400,8 +422,41 @@ def main() -> int:
         cluster = (row.get("cluster") or "").strip().lower() or "default"
         links_map = load_links()
         links = links_map.get(cluster, links_map["default"])
+        base_url, headers = _wp_headers()
+        ids = cfg.get("wp_cluster_category_ids", {})
+
+        extra_links: list[str] = []
+
+        if cluster == "paypig_entry":
+            extra_links += wp_fetch_recent_links_by_category(base_url, headers, ids.get("paypig_entry_for_paypigs", 0), 1)
+            extra_links += wp_fetch_recent_links_by_category(base_url, headers, ids.get("paypig_entry_mistresses", 0), 1)
+        elif cluster == "paypig_psychology":
+            extra_links += wp_fetch_recent_links_by_category(base_url, headers, ids.get("paypig_psychology_for_paypigs", 0), 2)
+        elif cluster == "domme_training":
+            extra_links += wp_fetch_recent_links_by_category(base_url, headers, ids.get("domme_training_for_findommes", 0), 2)
+        elif cluster == "session_dynamics":
+            extra_links += wp_fetch_recent_links_by_category(base_url, headers, ids.get("session_dynamics_findom_educational", 0), 2)
+
+        extra_links = [u for u in extra_links if u]
+        extra_links = list(dict.fromkeys(extra_links))[:2]
+
+        prompt_template = PROMPT_FILE.read_text(encoding="utf-8")
+
+        if extra_links:
+            prompt_template += (
+                "\n\nAdditional internal links.\n"
+                "Insert each link naturally in a relevant section of the article.\n"
+                "Do not place them next to each other.\n"
+                "Links:\n"
+                + "\n".join(extra_links)
+                + "\n"
+            )
 
         os.environ["PROMPT_OVERRIDE"] = prompt_template
+
+        if extra_links:
+            print("Extra internal links:", extra_links)        
+
         post = openai_generate_json(keyword, links)
         post_id, wp_status, date_gmt = wp_create_post(post, guides_id)
 
