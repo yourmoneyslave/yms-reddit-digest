@@ -1,0 +1,46 @@
+name: Keywords Fill Weekly
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install openai
+
+      - name: Run generate_keywords
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          KEYWORDS_PER_CLUSTER: "10"
+          MIN_WORDS: "4"
+          MAX_TOTAL_TODO: "50"
+          OPENAI_MODEL: "gpt-4.1-mini"
+          OPENAI_TEMPERATURE: "0.7"
+        run: |
+          python scripts/generate_keywords.py
+
+      - name: Commit updated CSV
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add data/keywords.csv
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Auto generate keywords"
+          git push
