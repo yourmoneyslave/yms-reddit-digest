@@ -199,7 +199,7 @@ def inject_personal_block(content_html: str, keyword: str) -> str:
 def openai_generate_json(keyword: str, links: list[str]) -> dict:
     model = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
 
-    prompt_template = PROMPT_FILE.read_text(encoding="utf-8")
+    prompt_template = os.environ.get("PROMPT_OVERRIDE") or PROMPT_FILE.read_text(encoding="utf-8")
     prompt = prompt_template.replace("{KEYWORD}", keyword)
 
     if len(links) < 3:
@@ -401,6 +401,7 @@ def main() -> int:
         links_map = load_links()
         links = links_map.get(cluster, links_map["default"])
 
+        os.environ["PROMPT_OVERRIDE"] = prompt_template
         post = openai_generate_json(keyword, links)
         post_id, wp_status, date_gmt = wp_create_post(post, guides_id)
 
