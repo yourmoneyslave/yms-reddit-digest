@@ -1,0 +1,125 @@
+[
+  {
+    "id": "https://www.reddit.com/t3_1rjr8nc",
+    "created_utc": 1772549297.0,
+    "created_iso": "2026-03-03T14:48:17+00:00",
+    "age_hours": 0,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "Do you think OnlyFans is bad?",
+    "url": "https://www.reddit.com/r/u_akira3lf/comments/1rjr8nc/do_you_think_onlyfans_is_bad/",
+    "score": 12,
+    "signals": [
+      "question",
+      "onlyfans",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal",
+        "kw:onlyfans"
+      ],
+      "score": [
+        "question",
+        "onlyfans",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+  },
+  {
+    "id": "https://www.reddit.com/t3_1rjr7sa",
+    "created_utc": 1772549238.0,
+    "created_iso": "2026-03-03T14:47:18+00:00",
+    "age_hours": 0,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "Como consigo assinantes para o Fansly?",
+    "url": "https://www.reddit.com/r/CamGirlProblems/comments/1rjr7sa/como_consigo_assinantes_para_o_fansly/",
+    "score": 12,
+    "signals": [
+      "question",
+      "fansly",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal",
+        "kw:fansly"
+      ],
+      "score": [
+        "question",
+        "fansly",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+  },
+  {
+    "id": "https://www.reddit.com/t3_1rjof9a",
+    "created_utc": 1772542040.0,
+    "created_iso": "2026-03-03T12:47:20+00:00",
+    "age_hours": 2,
+    "feed": "Findom general",
+    "kind": "GENERAL",
+    "title": "How do I navigate the findom world safely as a new sub?",
+    "url": "https://www.reddit.com/r/paypigsupportgroup/comments/1rjof9a/how_do_i_navigate_the_findom_world_safely_as_a/",
+    "score": 12,
+    "signals": [
+      "question",
+      "how-do-i",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "fallback"
+      ],
+      "score": [
+        "question",
+        "how-do-i",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 10
+    },
+    "opening": "If you are new to this, focus on understanding the dynamics first, the rest becomes much clearer after that."
+  },
+  {
+    "id": "https://www.reddit.com/t3_1rjnxuw",
+    "created_utc": 1772540635.0,
+    "created_iso": "2026-03-03T12:23:55+00:00",
+    "age_hours": 2,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "Is Sledge Queen Having an Onlyfans Account Canon?",
+    "url": "https://www.reddit.com/r/decayingwinter/comments/1rjnxuw/is_sledge_queen_having_an_onlyfans_account_canon/",
+    "score": 12,
+    "signals": [
+      "question",
+      "onlyfans",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal",
+        "kw:onlyfans"
+      ],
+      "score": [
+        "question",
+        "onlyfans",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+  }
+]
