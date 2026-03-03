@@ -52,10 +52,7 @@ def build_feeds() -> list[tuple[str, str]]:
         ("Paypig", 'paypig OR "pay pig"'),
         ("Beginner findomme", '"beginner findomme" OR "new findomme" OR "starting findom"'),
         ("Platforms", '"findom platform" OR loyalfans OR fansly OR onlyfans'),
-        ("TeamViewer", "teamviewer AND (findom OR femdom)"),
         ("Telegram", 'findom telegram OR "findom telegram group"'),
-        ("Femdom in media", '"femdom movies" OR "femdom tv" OR "mainstream femdom"'),
-        ("Manga comics", '"findom manga" OR "findom comic" OR "findom comics" OR doujin'),
         ("Findom stories", '"findom stories" OR "paypig stories"'),
         ("Findom forum", '"findom forum" OR "financial domination forum"'),
     ]
@@ -68,26 +65,114 @@ def build_feeds() -> list[tuple[str, str]]:
     return feeds
 
 
-def classify(feed_name: str, title: str) -> str:
+def classify(feed_name: str, title: str) -> tuple[str, list[str]]:
+    """Classify into one of: FINDOMME, PAYPIG, GENERAL.
+
+    Returns: (kind, reasons)
+    """
     f = (feed_name or "").lower()
     t = (title or "").lower()
+    reasons: list[str] = []
 
-    # strong findomme signals
-    if any(k in f for k in ["findomme", "platform"]) or any(k in t for k in ["findomme", "domme", "loyalfans", "fansly", "onlyfans"]):
-        return "FINDOMME"
+    # FINDOMME
+    if any(k in f for k in ["findomme", "platform"]) or any(
+        k in t for k in ["findomme", "domme", "loyalfans", "fansly", "onlyfans"]
+    ):
+        if any(k in f for k in ["findomme", "platform"]):
+            reasons.append("feed-signal")
+        for k in ["findomme", "domme", "loyalfans", "fansly", "onlyfans"]:
+            if k in t:
+                reasons.append(f"kw:{k}")
+        return "FINDOMME", reasons[:6]
 
-    # strong paypig signals
+    # PAYPIG
     if "paypig" in f or any(k in t for k in ["paypig", "pay pig", "submissive", "slave"]):
-        return "PAYPIG"
+        if "paypig" in f:
+            reasons.append("feed-signal")
+        for k in ["paypig", "pay pig", "submissive", "slave"]:
+            if k in t:
+                reasons.append(f"kw:{k}")
+        return "PAYPIG", reasons[:6]
 
-    # media cluster
-    if any(k in f for k in ["media", "manga"]) or any(k in t for k in ["movie", "movies", "tv", "television", "manga", "comic", "comics", "doujin"]):
-        return "MEDIA"
-
-    return "GENERAL"
+    return "GENERAL", ["fallback"]
 
 
-def compute_score(feed_name: str, title: str, age_h: int) -> tuple[int, list[str]]:
+# Scoring rules per category. Keep this small and opinionated, then iterate.
+CATEGORY_SCORING: dict[str, dict] = {
+    "FINDOMME": {
+        "threshold": int(os.getenv("THRESHOLD_FINDOMME", "12")),
+        "target_feeds": ["beginner findomme", "platforms"],
+        "bonus_terms": [
+            ("beginner", 4, "beginner"),
+            ("starting", 3, "start"),
+            ("how do i", 3, "how-do-i"),
+            ("how to", 3, "how-to"),
+            ("pricing", 3, "pricing"),
+            ("rates", 2, "rates"),
+            ("boundar", 3, "boundaries"),
+            ("screen", 2, "screening"),
+            ("platform", 3, "platform"),
+            ("loyalfans", 3, "loyalfans"),
+            ("fansly", 3, "fansly"),
+            ("onlyfans", 3, "onlyfans"),
+        ],
+        "penalty_terms": [
+            ("megathread", -5, "megathread"),
+            ("weekly thread", -5, "megathread"),
+            ("daily thread", -5, "megathread"),
+            ("monthly thread", -5, "megathread"),
+            ("looking for domme", -3, "solicitation"),
+            ("dm me", -3, "solicitation"),
+            ("telegram", -2, "telegram"),
+        ],
+    },
+    "PAYPIG": {
+        "threshold": int(os.getenv("THRESHOLD_PAYPIG", "11")),
+        "target_feeds": ["paypig"],
+        "bonus_terms": [
+            ("addict", 4, "addiction"),
+            ("can't stop", 4, "compulsion"),
+            ("can’t stop", 4, "compulsion"),
+            ("budget", 3, "budget"),
+            ("debt", 3, "debt"),
+            ("boundar", 3, "boundaries"),
+            ("safe", 2, "safety"),
+            ("rules", 2, "rules"),
+            ("how to", 3, "how-to"),
+            ("advice", 2, "advice"),
+            ("help", 2, "help"),
+        ],
+        "penalty_terms": [
+            ("megathread", -5, "megathread"),
+            ("weekly thread", -5, "megathread"),
+            ("daily thread", -5, "megathread"),
+            ("monthly thread", -5, "megathread"),
+            ("tribute", -2, "solicitation"),
+            ("dm me", -3, "solicitation"),
+        ],
+    },
+    "GENERAL": {
+        "threshold": int(os.getenv("THRESHOLD_GENERAL", "10")),
+        "target_feeds": ["findom general", "telegram", "findom stories", "findom forum"],
+        "bonus_terms": [
+            ("how to", 3, "how-to"),
+            ("how do i", 3, "how-do-i"),
+            ("beginner", 2, "beginner"),
+            ("boundar", 3, "boundaries"),
+            ("advice", 2, "advice"),
+            ("help", 2, "help"),
+        ],
+        "penalty_terms": [
+            ("megathread", -5, "megathread"),
+            ("weekly thread", -5, "megathread"),
+            ("daily thread", -5, "megathread"),
+            ("monthly thread", -5, "megathread"),
+        ],
+    },
+}
+
+
+def compute_score(kind: str, feed_name: str, title: str, age_h: int) -> tuple[int, list[str]]:
     t = (title or "").lower()
     f = (feed_name or "").lower()
     score = 0
@@ -98,36 +183,25 @@ def compute_score(feed_name: str, title: str, age_h: int) -> tuple[int, list[str
         score += 4
         reasons.append("question")
 
-    # high intent keywords
-    keywords = [
-        ("beginner", 3, "beginner"),
-        ("starting", 2, "start"),
-        ("start", 2, "start"),
-        ("how do i", 3, "how-do-i"),
-        ("how to", 3, "how-to"),
-        ("advice", 2, "advice"),
-        ("help", 2, "help"),
-        ("platform", 3, "platform"),
-        ("loyalfans", 3, "loyalfans"),
-        ("teamviewer", 3, "teamviewer"),
-        ("boundar", 3, "boundaries"),
-        ("addict", 3, "addiction"),
-        ("safe", 2, "safe"),
-    ]
-    for term, pts, label in keywords:
+    rules = CATEGORY_SCORING.get(kind) or CATEGORY_SCORING["GENERAL"]
+
+    # category bonuses
+    for term, pts, label in rules.get("bonus_terms", []):
         if term in t:
             score += pts
             reasons.append(label)
 
-    # feed relevance
-    if any(k in f for k in ["paypig", "findomme", "platform", "teamviewer"]):
+    # feed relevance (category specific)
+    target_feeds = [x.lower() for x in rules.get("target_feeds", [])]
+    if any(tf in f for tf in target_feeds):
         score += 2
         reasons.append("target-feed")
 
-    # penalties
-    if any(k in t for k in ["megathread", "weekly thread", "daily thread", "monthly thread"]):
-        score -= 4
-        reasons.append("megathread")
+    # category penalties
+    for term, pts, label in rules.get("penalty_terms", []):
+        if term in t:
+            score += pts
+            reasons.append(label)
 
     # age penalty
     if age_h <= 2:
@@ -161,9 +235,6 @@ def suggested_opening(kind: str, title: str) -> str:
         if "safe" in t or "boundar" in t:
             return "The safest way to approach this is to define boundaries first, then choose dynamics that respect them."
         return "Most beginners get stuck because they only see the fantasy part, but the real challenge is balance and structure."
-
-    if kind == "MEDIA":
-        return "Mainstream references can be fun, but they usually simplify the dynamics, the real thing is more psychological than it looks."
 
     return "If you are new to this, focus on understanding the dynamics first, the rest becomes much clearer after that."
 
@@ -223,9 +294,21 @@ def run():
                 continue
 
             age_h = hours_ago(created_ts)
-            kind = classify(feed_name, title)
-            score, reasons = compute_score(feed_name, title, age_h)
+            kind, kind_reasons = classify(feed_name, title)
+            score, score_reasons = compute_score(kind, feed_name, title, age_h)
+
+            # category threshold gate (fewer items, higher precision)
+            threshold = int((CATEGORY_SCORING.get(kind) or CATEGORY_SCORING["GENERAL"]).get("threshold", 10))
+            if score < threshold:
+                continue
+
             opening = suggested_opening(kind, title)
+
+            why = {
+                "kind": kind_reasons,
+                "score": score_reasons,
+                "threshold": threshold,
+            }
 
             item = {
                 "id": eid,
@@ -237,7 +320,8 @@ def run():
                 "title": title,
                 "url": link,
                 "score": score,
-                "signals": reasons,
+                "signals": score_reasons,
+                "why": why,
                 "opening": opening,
             }
             collected.append(item)
@@ -255,7 +339,7 @@ def run():
     out_path.write_text(json.dumps(collected, indent=2), encoding="utf-8")
 
     # split
-    high_priority = [x for x in collected if x["score"] >= 10 and x["age_hours"] <= 12][:10]
+    high_priority = [x for x in collected if x["score"] >= 14 and x["age_hours"] <= 12][:10]
     paypig = [x for x in collected if x["kind"] == "PAYPIG"][:10]
     findomme = [x for x in collected if x["kind"] == "FINDOMME"][:10]
     other = [x for x in collected if x["kind"] not in ["PAYPIG", "FINDOMME"]][:10]
@@ -278,7 +362,15 @@ def run():
             lines.append("")
             return
         for i, it in enumerate(items, start=1):
-            lines.append(f"{i}. [{it['kind']}] score {it['score']} age {it['age_hours']}h, signals: {', '.join(it['signals'])}")
+            why = it.get("why") or {}
+            kind_why = ", ".join(why.get("kind", []) or [])
+            score_why = ", ".join(why.get("score", []) or [])
+            thr = why.get("threshold", "?")
+            lines.append(
+                f"{i}. [{it['kind']}] score {it['score']} (thr {thr}) age {it['age_hours']}h"
+            )
+            lines.append(f"   Why kind: {kind_why or '-'}")
+            lines.append(f"   Why score: {score_why or '-'}")
             lines.append(f"   {it['title']}")
             lines.append(f"   {it['url']}")
             lines.append(f"   Opening: {it['opening']}")
@@ -302,8 +394,6 @@ def run():
             return '<span class="b b-paypig">PAYPIG</span>'
         if kind == "FINDOMME":
             return '<span class="b b-findomme">FINDOMME</span>'
-        if kind == "MEDIA":
-            return '<span class="b b-media">MEDIA</span>'
         return '<span class="b b-general">GENERAL</span>'
 
     def render_table(items: list[dict]) -> str:
@@ -312,6 +402,10 @@ def run():
 
         rows = []
         for i, it in enumerate(items, start=1):
+            why = it.get("why") or {}
+            kind_why = ", ".join(why.get("kind", []) or [])
+            score_why = ", ".join(why.get("score", []) or [])
+            thr = why.get("threshold", "?")
             rows.append(
                 f"""
                 <tr>
@@ -319,8 +413,9 @@ def run():
                   <td class="meta">
                     {badge(it.get("kind","GENERAL"))}
                     <div class="feed">{esc(it.get("feed",""))}</div>
-                    <div class="mini">score {it.get("score",0)} · {it.get("age_hours",0)}h</div>
-                    <div class="mini">signals: {esc(", ".join(it.get("signals", [])))}</div>
+                    <div class="mini">score {it.get("score",0)} (thr {thr}) · {it.get("age_hours",0)}h</div>
+                    <div class="mini"><b>Why kind:</b> {esc(kind_why or "-")}</div>
+                    <div class="mini"><b>Why score:</b> {esc(score_why or "-")}</div>
                   </td>
                   <td class="title">
                     <div class="t">{esc(it.get("title",""))}</div>
