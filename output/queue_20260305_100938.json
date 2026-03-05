@@ -1,0 +1,63 @@
+[
+  {
+    "id": "https://www.reddit.com/t3_1rldrty",
+    "created_utc": 1772705075.0,
+    "created_iso": "2026-03-05T10:04:35+00:00",
+    "age_hours": 0,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "Is an onlyfans obsession in a relationship normal?",
+    "url": "https://www.reddit.com/r/dating_advice/comments/1rldrty/is_an_onlyfans_obsession_in_a_relationship_normal/",
+    "score": 12,
+    "signals": [
+      "question",
+      "onlyfans",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal",
+        "kw:onlyfans"
+      ],
+      "score": [
+        "question",
+        "onlyfans",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+  },
+  {
+    "id": "https://www.reddit.com/t3_1rlbr9y",
+    "created_utc": 1772697580.0,
+    "created_iso": "2026-03-05T07:59:40+00:00",
+    "age_hours": 2,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "How to forgive my husband (40M) for breaking my (39F) trust for the second time?",
+    "url": "https://www.reddit.com/r/relationship_advice/comments/1rlbr9y/how_to_forgive_my_husband_40m_for_breaking_my_39f/",
+    "score": 12,
+    "signals": [
+      "question",
+      "how-to",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal"
+      ],
+      "score": [
+        "question",
+        "how-to",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "A lot of beginner dommes underestimate how much paypig psychology drives everything, not just content or pricing."
+  }
+]
