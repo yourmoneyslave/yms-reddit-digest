@@ -1,0 +1,64 @@
+[
+  {
+    "id": "https://www.reddit.com/t3_1rn4dzs",
+    "created_utc": 1772870812.0,
+    "created_iso": "2026-03-07T08:06:52+00:00",
+    "age_hours": 0,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "Is your Fansly Timelimed locked to subscribers only or open to followers too?",
+    "url": "https://www.reddit.com/r/CreatorsAdvice/comments/1rn4dzs/is_your_fansly_timelimed_locked_to_subscribers/",
+    "score": 12,
+    "signals": [
+      "question",
+      "fansly",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal",
+        "kw:fansly"
+      ],
+      "score": [
+        "question",
+        "fansly",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+  },
+  {
+    "id": "https://www.reddit.com/t3_1rn3i0t",
+    "created_utc": 1772867712.0,
+    "created_iso": "2026-03-07T07:15:12+00:00",
+    "age_hours": 1,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "Should I stop teasing\u2026 or make it worse for you? \ud83d\ude08 Message me in my links (OF & Fansly) and tell me what you\u2019d do\u2026",
+    "url": "https://www.reddit.com/r/u_itsfayfanfare04/comments/1rn3i0t/should_i_stop_teasing_or_make_it_worse_for_you/",
+    "score": 12,
+    "signals": [
+      "question",
+      "fansly",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal",
+        "kw:fansly"
+      ],
+      "score": [
+        "question",
+        "fansly",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+  }
+]
