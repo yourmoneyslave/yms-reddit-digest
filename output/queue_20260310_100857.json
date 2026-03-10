@@ -1,0 +1,91 @@
+[
+  {
+    "id": "https://www.reddit.com/t3_1rps2bc",
+    "created_utc": 1773134068.0,
+    "created_iso": "2026-03-10T09:14:28+00:00",
+    "age_hours": 0,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "Just checking. Is onlyfans down for everyone else right now?",
+    "url": "https://www.reddit.com/r/onlyfansadvice/comments/1rps2bc/just_checking_is_onlyfans_down_for_everyone_else/",
+    "score": 12,
+    "signals": [
+      "question",
+      "onlyfans",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal",
+        "kw:onlyfans"
+      ],
+      "score": [
+        "question",
+        "onlyfans",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+  },
+  {
+    "id": "https://www.reddit.com/t3_1rpr6sh",
+    "created_utc": 1773130672.0,
+    "created_iso": "2026-03-10T08:17:52+00:00",
+    "age_hours": 1,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "Hi! How do I do this?",
+    "url": "https://www.reddit.com/r/audiodrama/comments/1rpr6sh/hi_how_do_i_do_this/",
+    "score": 12,
+    "signals": [
+      "question",
+      "how-do-i",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal"
+      ],
+      "score": [
+        "question",
+        "how-do-i",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "A lot of beginner dommes underestimate how much paypig psychology drives everything, not just content or pricing."
+  },
+  {
+    "id": "https://www.reddit.com/t3_1rpktff",
+    "created_utc": 1773109861.0,
+    "created_iso": "2026-03-10T02:31:01+00:00",
+    "age_hours": 7,
+    "feed": "Findom general",
+    "kind": "GENERAL",
+    "title": "how do I get into findom without posting myself on social media? Scared of family seeing",
+    "url": "https://www.reddit.com/r/u_s3lling4/comments/1rpktff/how_do_i_get_into_findom_without_posting_myself/",
+    "score": 10,
+    "signals": [
+      "question",
+      "how-do-i",
+      "target-feed"
+    ],
+    "why": {
+      "kind": [
+        "fallback"
+      ],
+      "score": [
+        "question",
+        "how-do-i",
+        "target-feed"
+      ],
+      "threshold": 10
+    },
+    "opening": "If you are new to this, focus on understanding the dynamics first, the rest becomes much clearer after that."
+  }
+]
