@@ -1,0 +1,33 @@
+[
+  {
+    "id": "https://www.reddit.com/t3_1rqoyhp",
+    "created_utc": 1773220942.0,
+    "created_iso": "2026-03-11T09:22:22+00:00",
+    "age_hours": 0,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "Which house rules onlyfans-style earnings?",
+    "url": "https://www.reddit.com/r/vedicastrology/comments/1rqoyhp/which_house_rules_onlyfansstyle_earnings/",
+    "score": 12,
+    "signals": [
+      "question",
+      "onlyfans",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal",
+        "kw:onlyfans"
+      ],
+      "score": [
+        "question",
+        "onlyfans",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+  }
+]
