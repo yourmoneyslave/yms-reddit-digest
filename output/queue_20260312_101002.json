@@ -1,0 +1,33 @@
+[
+  {
+    "id": "https://www.reddit.com/t3_1rrk9u1",
+    "created_utc": 1773300783.0,
+    "created_iso": "2026-03-12T07:33:03+00:00",
+    "age_hours": 2,
+    "feed": "Platforms",
+    "kind": "FINDOMME",
+    "title": "onlyfans? O cu\u00e1l p\u00e1gina me recomiendan",
+    "url": "https://www.reddit.com/r/Desahogo2/comments/1rrk9u1/onlyfans_o_cu\u00e1l_p\u00e1gina_me_recomiendan/",
+    "score": 12,
+    "signals": [
+      "question",
+      "onlyfans",
+      "target-feed",
+      "fresh"
+    ],
+    "why": {
+      "kind": [
+        "feed-signal",
+        "kw:onlyfans"
+      ],
+      "score": [
+        "question",
+        "onlyfans",
+        "target-feed",
+        "fresh"
+      ],
+      "threshold": 12
+    },
+    "opening": "Platform choice matters less than positioning, boundaries, and consistency, especially at the beginning."
+  }
+]
